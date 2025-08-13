@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sailing Trip Voting</title>
+  <style>
+    :root{
+      --bg:#0b1220; --panel:#121a2b; --panel-2:#0f1727; --text:#e6edf7; --muted:#9fb0d1; --acc:#3dbff0; --acc-2:#74e0a8; --red:#ff6b6b;
+      --border: #1e2a44;
+    }
+    *{box-sizing:border-box}
+    body{margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif; color:var(--text); background:linear-gradient(180deg,#07101e, #0b1220 30%, #0b1220)}
+    header{position:sticky; top:0; z-index:5; background:linear-gradient(180deg, rgba(11,18,32,.95), rgba(11,18,32,.85)); backdrop-filter:saturate(1.2) blur(6px); border-bottom:1px solid var(--border)}
+    .wrap{max-width:1200px; margin:0 auto; padding:16px}
+    h1{margin:0; font-weight:800; letter-spacing:.2px; font-size:clamp(22px, 2.2vw, 28px)}
+    .sub{color:var(--muted); font-size:14px}
+    .grid{display:grid; grid-template-columns:280px 1fr; gap:16px; align-items:start}
+    @media (max-width:900px){.grid{grid-template-columns:1fr}}
+    .card{background:linear-gradient(180deg, var(--panel), var(--panel-2)); border:1px solid var(--border); border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,.25)}
+    .card .hd{padding:14px 16px; border-bottom:1px solid var(--border); font-weight:700}
+    .card .bd{padding:14px 16px}
+    .row{display:flex; gap:8px; align-items:center}
+    input[type="text"], input[type="url"]{width:100%; background:#0a1426; color:var(--text); border:1px solid var(--border); border-radius:12px; padding:12px 12px; outline:none}
+    input::placeholder{color:#6e7fa5}
+    button{cursor:pointer; border:1px solid var(--border); background:linear-gradient(180deg, #0f2036, #0d1a2c); color:var(--text); padding:10px 12px; border-radius:12px; font-weight:600}
+    button:hover{border-color:#2a3b61}
+    .btn-acc{background:linear-gradient(180deg, #113654, #0e2b43); border-color:#1f3c62}
+    .btn-acc:hover{background:linear-gradient(180deg, #0f2f49, #0c263a)}
+    .btn-sm{padding:6px 10px; border-radius:10px; font-size:13px}
+    .list{display:flex; flex-direction:column; gap:10px}
+    .person{display:flex; align-items:center; gap:10px; padding:10px; border:1px solid var(--border); background:#0c1528; border-radius:12px}
+    .person.active{outline:2px solid var(--acc); box-shadow:0 0 0 3px rgba(61,191,240,.18)}
+    .badge{display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:50%; font-weight:800; color:#05101c; background:linear-gradient(180deg, var(--acc), var(--acc-2))}
+    .muted{color:var(--muted)}
+    .url-card{display:grid; grid-template-columns: 1fr; gap:8px; border:1px solid var(--border); background:#0c1528; border-radius:16px; overflow:hidden}
+    .url-top{display:flex; gap:10px; align-items:center; padding:12px 12px 0 12px}
+    .url-actions{display:flex; gap:8px; align-items:center; margin-left:auto}
+    .pill{font-size:12px; border:1px solid var(--border); background:#0b1323; padding:6px 8px; border-radius:999px}
+    .vote-btn{display:inline-flex; gap:6px; align-items:center}
+    .vote-btn[disabled]{opacity:.6; cursor:not-allowed}
+    .iframe-wrap{border-top:1px solid var(--border); background:#091427}
+    iframe{width:100%; height:340px; border:0; background:#0c1528}
+    .votes{display:flex; flex-wrap:wrap; gap:6px; padding:10px 12px 12px}
+    .chip{display:inline-flex; gap:6px; align-items:center; border:1px solid var(--border); padding:6px 8px; border-radius:999px; background:#0b1323}
+    .chip .mini{width:20px; height:20px; border-radius:50%; background:linear-gradient(180deg, var(--acc), var(--acc-2)); color:#081320; font-weight:900; display:inline-grid; place-items:center; font-size:11px}
+    .empty{border:1px dashed var(--border); border-radius:12px; padding:16px; text-align:center; color:var(--muted)}
+    .footer-note{padding:12px; text-align:center; color:#6e7fa5; font-size:12px}
+    a{color:#93d5ff}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <h1>⛵ Sailing Trip Voting</h1>
+      <div class="sub">Plan a small‑crew adventure. Add sailors, drop links, let each person vote a single thumbs‑up per link.</div>
+    </div>
+  </header>
+
+  <main class="wrap" style="padding-top:20px">
+    <div class="grid">
+      <!-- People / voters -->
+      <section class="card">
+        <div class="hd">Crew</div>
+        <div class="bd">
+          <form id="addPersonForm" class="row" autocomplete="off">
+            <input type="text" id="personName" placeholder="Add crew member by name" required />
+            <button class="btn-acc" type="submit">Add</button>
+          </form>
+          <div style="height:10px"></div>
+          <div id="peopleList" class="list"></div>
+          <div id="noPeople" class="empty" style="display:none">No crew yet. Add names to start voting.</div>
+        </div>
+      </section>
+
+      <!-- URLs / options -->
+      <section class="card">
+        <div class="hd">Trip Options</div>
+        <div class="bd">
+          <form id="addUrlForm" class="row" autocomplete="off">
+            <input type="url" id="urlInput" placeholder="Paste a trip link (harbor, charter, map, docs...)" required />
+            <button class="btn-acc" type="submit">Add</button>
+          </form>
+          <div style="height:10px"></div>
+          <div id="urlList" class="list"></div>
+          <div id="noUrls" class="empty" style="display:none">No links yet. Paste a URL above.</div>
+        </div>
+      </section>
+    </div>
+
+    <div class="footer-note">Data is stored locally in your browser. Clearing site data resets everything. If a site blocks embedding, use the open link.</div>
+  </main>
+
+  <script>
+  // Persistent state
+  const STORAGE_KEY = 'sailing-vote-state-v1';
+  let state = loadState() || { voters: [], urls: [], activeVoterId: null };
+
+  function saveState(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+  function loadState(){ try{ return JSON.parse(localStorage.getItem(STORAGE_KEY)); }catch{ return null; } }
+
+  // Helpers
+  const $ = sel => document.querySelector(sel);
+  const $$ = sel => Array.from(document.querySelectorAll(sel));
+  const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+  function initials(name){ return name.trim().split(/\s+/).map(s=>s[0]).join('').slice(0,2).toUpperCase(); }
+  function friendly(url){ try{ const u=new URL(url); return u.hostname.replace(/^www\./,''); } catch { return url; } }
+  function normalizeUrl(raw){ try{ let u = new URL(raw); return u.href; } catch { if(/^\w+\.\w+/.test(raw)){ return 'https://'+raw; } return raw; } }
+
+  // Render
+  function render(){
+    renderPeople();
+    renderUrls();
+    saveState();
+  }
+
+  function renderPeople(){
+    const list = $('#peopleList');
+    list.innerHTML = '';
+    if(state.voters.length === 0){ $('#noPeople').style.display='block'; return; } else { $('#noPeople').style.display='none'; }
+    state.voters.forEach(v => {
+      const div = document.createElement('button');
+      div.type='button';
+      div.className = 'person' + (state.activeVoterId===v.id ? ' active' : '');
+      div.innerHTML = `<span class="badge" title="${v.name}">${initials(v.name)}</span>
+        <span style="font-weight:700">${escapeHtml(v.name)}</span>
+        <span class="muted" style="margin-left:auto; font-size:12px">${votesBy(v.id)} votes</span>`;
+      div.addEventListener('click', ()=>{ state.activeVoterId = v.id; render(); });
+      list.appendChild(div);
+    });
+  }
+
+  function votesBy(voterId){
+    return state.urls.reduce((acc,u)=> acc + (u.votes && u.votes[voterId] ? 1 : 0), 0);
+  }
+
+  function renderUrls(){
+    const list = $('#urlList');
+    list.innerHTML = '';
+    if(state.urls.length === 0){ $('#noUrls').style.display='block'; return; } else { $('#noUrls').style.display='none'; }
+    state.urls.forEach(u => list.appendChild(renderUrlCard(u)));
+  }
+
+  function renderUrlCard(u){
+    const card = document.createElement('div');
+    card.className = 'url-card';
+
+    const voters = Object.keys(u.votes||{});
+    const voterNames = voters.map(id => (state.voters.find(v=>v.id===id)||{}).name).filter(Boolean);
+
+    const votedByActive = !!(u.votes && state.activeVoterId && u.votes[state.activeVoterId]);
+    const activeName = (state.voters.find(v=>v.id===state.activeVoterId)||{}).name || 'Select a crew member';
+
+    const top = document.createElement('div');
+    top.className = 'url-top';
+    top.innerHTML = `
+      <div class="pill" title="Host">${escapeHtml(friendly(u.url))}</div>
+      <a href="${escapeAttr(u.url)}" target="_blank" rel="noopener">Open</a>
+      <div class="url-actions">
+        <span class="pill" title="Total votes">⭐ ${voters.length}</span>
+        <button class="vote-btn btn-sm" ${!state.activeVoterId? 'disabled title="Select a crew member first"': ''} ${votedByActive? 'disabled title="You already voted"': ''}>👍 Vote as ${escapeAttr(activeName)}</button>
+        <button class="btn-sm" title="Remove link">🗑️</button>
+      </div>`;
+
+    const [voteBtn, delBtn] = top.querySelectorAll('button');
+    voteBtn.addEventListener('click', ()=> castVote(u.id));
+    delBtn.addEventListener('click', ()=> removeUrl(u.id));
+
+    const iframeWrap = document.createElement('div');
+    iframeWrap.className = 'iframe-wrap';
+    const iframe = document.createElement('iframe');
+    iframe.loading = 'lazy';
+    iframe.referrerPolicy = 'no-referrer';
+    iframe.sandbox = 'allow-scripts allow-same-origin allow-forms allow-popups';
+    iframe.src = u.url;
+    iframeWrap.appendChild(iframe);
+
+    const votes = document.createElement('div');
+    votes.className = 'votes';
+    if(voterNames.length){
+      voterNames.forEach(name => {
+        const chip = document.createElement('span');
+        chip.className = 'chip';
+        chip.innerHTML = `<span class="mini">${escapeHtml(initials(name))}</span> ${escapeHtml(name)}`;
+        votes.appendChild(chip);
+      });
+    } else {
+      const none = document.createElement('div');
+      none.className = 'muted';
+      none.textContent = 'No votes yet';
+      votes.appendChild(none);
+    }
+
+    card.appendChild(top);
+    card.appendChild(iframeWrap);
+    card.appendChild(votes);
+    return card;
+  }
+
+  // Actions
+  function castVote(urlId){
+    const voterId = state.activeVoterId;
+    if(!voterId) return;
+    const url = state.urls.find(x=>x.id===urlId);
+    url.votes = url.votes || {};
+    if(url.votes[voterId]) return; // already voted
+    url.votes[voterId] = true;
+    render();
+  }
+
+  function removeUrl(urlId){
+    state.urls = state.urls.filter(x=>x.id!==urlId);
+    render();
+  }
+
+  function addPerson(name){
+    name = name.trim();
+    if(!name) return;
+    // prevent duplicate names by adding numeric suffix
+    const exists = state.voters.some(v=>v.name.toLowerCase()===name.toLowerCase());
+    const id = uid();
+    state.voters.push({ id, name: exists ? uniqueName(name) : name });
+    if(!state.activeVoterId) state.activeVoterId = id;
+    render();
+  }
+
+  function uniqueName(name){
+    let i = 2; let candidate = `${name} ${i}`;
+    while(state.voters.some(v=>v.name.toLowerCase()===candidate.toLowerCase())){ i++; candidate = `${name} ${i}`; }
+    return candidate;
+  }
+
+  function addUrl(raw){
+    const url = normalizeUrl(raw.trim());
+    try{ new URL(url); } catch { alert('Please enter a valid URL.'); return; }
+    const id = uid();
+    state.urls.unshift({ id, url, votes:{} });
+    render();
+  }
+
+  // Forms
+  $('#addPersonForm').addEventListener('submit', e=>{
+    e.preventDefault();
+    const name = $('#personName').value;
+    addPerson(name);
+    $('#personName').value='';
+  });
+
+  $('#addUrlForm').addEventListener('submit', e=>{
+    e.preventDefault();
+    const url = $('#urlInput').value;
+    addUrl(url);
+    $('#urlInput').value='';
+  });
+
+  // Simple XSS guards for displayed values
+  function escapeHtml(s){ return (s+"").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }
+  function escapeAttr(s){ return escapeHtml(s).replace(/"/g,'&quot;'); }
+
+  // Initial demo data if fresh
+  if(!state.urls.length && !state.voters.length){
+    state = {
+      voters: [ {id: uid(), name: 'Skipper'}, {id: uid(), name:'Navigator'} ],
+      urls: [
+        { id: uid(), url: 'https://www.openstreetmap.org/#map=10/43.2983/16.4368', votes:{} },
+        { id: uid(), url: 'https://www.navily.com', votes:{} }
+      ],
+      activeVoterId: null
+    };
+  }
+
+  render();
+  </script>
+</body>
+</html>
